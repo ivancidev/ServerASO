@@ -12,6 +12,9 @@ def index():
 def shares():
     return sambaRoute.get_shares()
 
+@app.route('/start', methods=['GET'])
+def status():
+    return sambaRoute.get_status()
 
 if __name__ == "__main__":
     app.run(debug=True)
