@@ -39,3 +39,15 @@ def get_shares():
     return jsonify(shares)
     
 
+#Cambiar de nombre de recurso
+def rename_share(old_name, new_name):
+    with open('/etc/samba/smb.conf', 'r') as file:
+        lines = file.readlines()
+
+    with open('/etc/samba/smb.conf', 'w') as file:
+        for line in lines:
+            if line.strip().startswith('[') and line.strip().endswith(']'):
+                share_name = line.strip()[1:-1]
+                if share_name == old_name:
+                    line = f"[{new_name}]\n"
+            file.write(line)
