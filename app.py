@@ -21,6 +21,10 @@ def rename_share_route():
 
     return jsonify({'message': 'Share renamed succesfully'})
 
+@app.route('/start', methods=['GET'])
+def status():
+    return sambaRoute.get_status()
+
 
 if __name__ == "__main__":
     app.run(debug=True)

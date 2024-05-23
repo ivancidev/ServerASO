@@ -1,5 +1,6 @@
 # aqui debe ir todas la configuraciones que se hace en cada peticion 
 from flask import jsonify
+import subprocess
 
 def greet():
     return 'Hola soy el API'
@@ -37,6 +38,7 @@ def get_shares():
             shares.append(current_share)
             
     return jsonify(shares)
+
     
 
 #Cambiar de nombre de recurso
@@ -51,3 +53,29 @@ def rename_share(old_name, new_name):
                 if share_name == old_name:
                     line = f"[{new_name}]\n"
             file.write(line)
+
+def get_status():
+    try:
+        # Ejecuta el comando `systemctl is-active smb`
+        result = subprocess.run(['systemctl', 'is-active', 'smbd.service'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        
+        # Captura la salida y limpia los espacios en blanco
+        output = result.stdout.strip()
+        
+        # Verifica si el comando se ejecutó correctamente y si el servicio está activo
+        if result.returncode == 0 and output == 'active':
+            return jsonify({
+                'success': True,
+                'status': 'active'
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'status': output
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
