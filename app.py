@@ -39,5 +39,19 @@ def login():
         else:
             return jsonify({'error': 'Login failed'}), 401
 
+def authenticate(username, password):
+    p = pam.pam()
+    return p.authenticate(username, password)
+
+@app.route('/login', methods=['POST'])
+def login():
+        username = request.json['username']
+        password = request.json['password']
+        if authenticate(username, password):
+            return jsonify({'message': 'Login successful'}), 200
+        else:
+            return jsonify({'error': 'Login failed'}), 401
+
+
 if __name__ == "__main__":
     app.run(debug=True)

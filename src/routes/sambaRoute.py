@@ -1,10 +1,10 @@
-# aqui debe ir todas la configuraciones que se hace en cada peticion 
 from flask import jsonify
 import subprocess
 
 def greet():
     return 'Hola soy el API'
 
+#Mostrar los recursos compartidos
 def get_shares():
     shares = []
     current_share = None
@@ -21,7 +21,15 @@ def get_shares():
                     'readOnly': 'Yes',
                     'path': '',
                     'guestAccess': 'No',
-                    'comment': ''
+                    'comment': '',
+                    'validUsers': '',
+                    'browseable': '',
+                    'inheritAcls': '',
+                    'createMask': '',
+                    'directoryMask': '',
+                    'writeList': '',
+                    'forceGroup': ''
+
                 }
             elif '=' in line and current_share:
                 key, value = [x.strip() for x in line.split('=', 1)]
@@ -33,13 +41,23 @@ def get_shares():
                     current_share['guestAccess'] = 'Yes' if value.lower() == 'yes' else 'No'
                 elif key == 'comment':
                     current_share['comment'] = value
-
+                elif key == 'valid users':
+                    current_share['validUsers'] = value
+                elif key == 'browseable':
+                    current_share['browseable'] = value
+                elif key == 'inherit acls':
+                    current_share['inheritAcls'] = value
+                elif key == 'create mask':
+                    current_share['createMask'] = value
+                elif key == 'directory mask':
+                    current_share['directoryMask'] = value
+                elif key == 'write list':
+                    current_share['writeList'] = value
+                elif key == 'force group':
+                    current_share['forceGroup'] = value
         if current_share:
             shares.append(current_share)
-            
     return jsonify(shares)
-
-    
 
 #Cambiar de nombre de recurso
 def rename_share(old_name, new_name):
@@ -57,7 +75,7 @@ def rename_share(old_name, new_name):
 def get_status():
     try:
         # Ejecuta el comando `systemctl is-active smb`
-        result = subprocess.run(['systemctl', 'is-active', 'smbd.service'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        result = subprocess.run(['systemctl', 'is-active', 'smb'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         
         # Captura la salida y limpia los espacios en blanco
         output = result.stdout.strip()
@@ -78,4 +96,3 @@ def get_status():
             'success': False,
             'error': str(e)
         })
-
