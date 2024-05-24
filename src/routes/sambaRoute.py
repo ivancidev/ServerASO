@@ -168,7 +168,7 @@ def parse_json(data):
 
     return transformed_data
   
- def get_enableAtBoot():
+def get_enableAtBoot():
     try:
         # Ejecuta el comando `systemctl is-active smb`
         result = subprocess.run(['systemctl', 'is-enabled', 'smbd.service'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
