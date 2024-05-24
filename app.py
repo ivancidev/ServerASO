@@ -55,5 +55,19 @@ def authenticate(username, password):
     p = pam.pam()
     return p.authenticate(username, password)
 
+@app.route('/shares/<share_name>', methods=['PUT'])
+def update_share(share_name):
+    updates = request.data.decode('utf-8')
+
+    try:
+        updates_json = sambaRoute.parse_json(updates)
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+    if sambaRoute.update_share_config(share_name, updates_json):
+        return jsonify({"status": "success", "updated": updates_json})
+    else:
+        return jsonify({"status": "error", "message": "Share not found"}), 404
+
 if __name__ == "__main__":
     app.run(debug=True)
