@@ -120,3 +120,38 @@ def get_enableAtBoot():
             'success': False,
             'error': str(e)
         })
+def update_samba(action):
+    try:
+        # Mapa de acciones a comandos systemctl
+        commands = {
+            'stop': 'systemctl stop smb',
+            'restart': 'systemctl restart smb',
+            'reload': 'systemctl reload smb'
+        }
+        # Verifica si la acción es válida
+        if action in commands:
+            # Ejecuta el comando correspondiente
+            result = subprocess.run(commands[action], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            if result.returncode == 0:
+                return {
+                    'success': True,
+                    'message': f'Samba service {action}ed successfully.',
+                    'output': result.stdout.strip()
+                }
+            else:
+                return {
+                    'success': False,
+                    'message': f'Failed to {action} Samba service.',
+                    'error': result.stderr.strip()
+                }
+        else:
+            return {
+                'success': False,
+                'message': 'Invalid action. Please use "stop", "restart", or "reload".'
+            }
+    except Exception as e:
+        return {
+            'success': False,
+            'message': 'An error occurred while updating the Samba service.',
+            'error': str(e)
+        }

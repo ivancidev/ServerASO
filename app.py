@@ -30,6 +30,14 @@ def status():
 def enable():
     return sambaRoute.get_enableAtBoot()
 
+@app.route('/update_samba', methods=['POST'])
+def updateSamba():
+    data = request.get_json()
+    action = data.get('action')
+    onReboot = data.get('onReboot')
+    result = sambaRoute.update_samba(action)
+    return jsonify(result)
+
 def authenticate(username, password):
     p = pam.pam()
     return p.authenticate(username, password)
