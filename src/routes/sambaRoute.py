@@ -75,7 +75,7 @@ def rename_share(old_name, new_name):
 def get_status():
     try:
         # Ejecuta el comando `systemctl is-active smb`
-        result = subprocess.run(['systemctl', 'is-active', 'smb'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        result = subprocess.run(['systemctl', 'is-active', 'smbd.service'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         
         # Captura la salida y limpia los espacios en blanco
         output = result.stdout.strip()
@@ -85,6 +85,30 @@ def get_status():
             return jsonify({
                 'success': True,
                 'status': 'active'
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'status': output
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+def get_enableAtBoot():
+    try:
+        # Ejecuta el comando `systemctl is-active smb`
+        result = subprocess.run(['systemctl', 'is-enabled', 'smbd.service'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        
+        # Captura la salida y limpia los espacios en blanco
+        output = result.stdout.strip()
+        
+        # Verifica si el comando se ejecutó correctamente y si el servicio está activo
+        if result.returncode == 0 and output == 'active':
+            return jsonify({
+                'success': True,
+                'status': 'enabled'
             })
         else:
             return jsonify({
