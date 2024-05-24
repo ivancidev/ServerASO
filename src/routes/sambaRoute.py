@@ -88,7 +88,7 @@ def rename_share(old_name, new_name):
 def get_status():
     try:
         # Ejecuta el comando `systemctl is-active smb`
-        result = subprocess.run(['systemctl', 'is-active', 'smb'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        result = subprocess.run(['systemctl', 'is-active', 'smbd.service'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         
         # Captura la salida y limpia los espacios en blanco
         output = result.stdout.strip()
@@ -109,7 +109,6 @@ def get_status():
             'success': False,
             'error': str(e)
         })
-        
 
 
 def load_config():
@@ -168,3 +167,64 @@ def parse_json(data):
         transformed_data[transformed_key] = value
 
     return transformed_data
+  
+ def get_enableAtBoot():
+    try:
+        # Ejecuta el comando `systemctl is-active smb`
+        result = subprocess.run(['systemctl', 'is-enabled', 'smbd.service'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        
+        # Captura la salida y limpia los espacios en blanco
+        output = result.stdout.strip()
+        
+        # Verifica si el comando se ejecutó correctamente y si el servicio está activo
+        if result.returncode == 0 and output == 'active':
+            return jsonify({
+                'success': True,
+                'status': 'enabled'
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'status': output
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+def update_samba(action):
+    try:
+        # Mapa de acciones a comandos systemctl
+        commands = {
+            'stop': 'systemctl stop smb',
+            'restart': 'systemctl restart smb',
+            'reload': 'systemctl reload smb'
+        }
+        # Verifica si la acción es válida
+        if action in commands:
+            # Ejecuta el comando correspondiente
+            result = subprocess.run(commands[action], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            if result.returncode == 0:
+                return {
+                    'success': True,
+                    'message': f'Samba service {action}ed successfully.',
+                    'output': result.stdout.strip()
+                }
+            else:
+                return {
+                    'success': False,
+                    'message': f'Failed to {action} Samba service.',
+                    'error': result.stderr.strip()
+                }
+        else:
+            return {
+                'success': False,
+                'message': 'Invalid action. Please use "stop", "restart", or "reload".'
+            }
+    except Exception as e:
+        return {
+            'success': False,
+            'message': 'An error occurred while updating the Samba service.',
+            'error': str(e)
+        }
+
