@@ -1,3 +1,7 @@
+from flask import jsonify,request
+import subprocess
+import re
+import json
 from flask import jsonify
 import subprocess
 import re
@@ -39,6 +43,7 @@ def get_shares():
                     'vetoFiles': ''
 
                 }
+
             elif '=' in line and current_share:
                 key, value = [x.strip() for x in line.split('=', 1)]
                 if key == 'path':
@@ -193,35 +198,36 @@ def get_enableAtBoot():
             'success': False,
             'error': str(e)
         })
-def update_samba(action):
+def update_samba(action, onReboot):
     try:
         # Mapa de acciones a comandos systemctl
         commands = {
-            'stop': 'systemctl stop smb',
-            'restart': 'systemctl restart smb',
-            'reload': 'systemctl reload smb'
+            'stop': 'systemctl stop smbd.service',
+            'restart': 'systemctl restart smbd.service',
+            'reload': 'systemctl reload smbd.service',
+            'enabled': 'systemctl enable smbd.service',
+            'disabled': 'systemctl disable smbd.service'
         }
-        # Verifica si la acción es válida
         if action in commands:
-            # Ejecuta el comando correspondiente
-            result = subprocess.run(commands[action], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-            if result.returncode == 0:
-                return {
-                    'success': True,
-                    'message': f'Samba service {action}ed successfully.',
-                    'output': result.stdout.strip()
-                }
-            else:
-                return {
-                    'success': False,
-                    'message': f'Failed to {action} Samba service.',
-                    'error': result.stderr.strip()
-                }
+            action_result = execute_command(commands[action])
         else:
             return {
                 'success': False,
                 'message': 'Invalid action. Please use "stop", "restart", or "reload".'
             }
+        if onReboot in commands:
+            boot_result = execute_command(commands[onReboot])
+        else:
+            return {
+                'success': False,
+                'message': 'Invalid boot action. Please use "enable" or "disable".'
+            }
+        return {
+            'success': True,
+            'action_result': action_result,
+            'boot_result': boot_result
+        }
+
     except Exception as e:
         return {
             'success': False,
@@ -260,33 +266,63 @@ def delete_samba_share(share_name):
         return True, f"Share '{share_name}' successfully deleted."
     except Exception as e:
         return False, str(e)
-    
-    
-def format_key(key):
-    formatted_key = ''
-    for i, char in enumerate(key):
-        if i > 0 and char.isupper():
-            formatted_key += ' ' + char.lower()
+
+def get_workgroup():
+    try:
+        with open(SAMBA_CONFIG_FILE, 'r') as file:
+            for line in file:
+                if line.strip().startswith('workgroup'):
+                    _, workgroup = line.strip().split('=', 1)
+                    workgroup = workgroup.strip()
+                    return jsonify({'workgroup': workgroup}), 200
+        return jsonify({'error': 'Workgroup not found'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+def update_workgroup():
+    try:
+        new_workgroup = request.json.get('workgroup')
+        if new_workgroup:
+            success, message = update_workgroup_config(new_workgroup)
+            if success:
+                return jsonify({'success': True, 'message': message}), 200
+            else:
+                return jsonify({'success': False, 'error': message}), 500
         else:
-            formatted_key += char
-    return formatted_key
+            return jsonify({'success': False, 'error': 'No workgroup provided in request'}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
-def add_samba_share(config_path, share_config):
-    config = configparser.ConfigParser(allow_no_value=True)
-    config.optionxform = str  
-    config.read(config_path)
+def update_workgroup_config(new_workgroup):
+    try:
+        lines = []
+        with open(SAMBA_CONFIG_FILE, 'r') as file:
+            lines = file.readlines()
 
-    if config.has_section(share_config['name']):
-        raise ValueError(f"Share {share_config['name']} already exists")
+        with open(SAMBA_CONFIG_FILE, 'w') as file:
+            for i, line in enumerate(lines):
+                if line.strip().startswith('workgroup'):
+                    lines[i] = f'        workgroup = {new_workgroup}\n'
+                    break
 
-    config.add_section(share_config['name'])
+            file.writelines(lines)
 
-    for key, value in share_config.items():
-        if key != 'name': 
-            formatted_key = format_key(key)
-            config.set(share_config['name'], formatted_key, value)
+        return True, 'Workgroup updated successfully'
+    except Exception as e:
+        return False, str(e)
 
-    with open(config_path, 'w') as configfile:
-        config.write(configfile)
+def execute_command(command):
+    result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+    if result.returncode == 0:
+        return {
+            'success': True,
+            'output': result.stdout.strip()
+        }
+    else:
+        return {
+            'success': False,
+            'error': result.stderr.strip()
+        }
 
+  
 
