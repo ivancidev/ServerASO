@@ -5,6 +5,9 @@ import pam
 
 app = Flask(__name__)
 CORS(app)
+
+
+
 @app.route('/', methods=['GET'])
 def index():
     return sambaRoute.greet()
@@ -26,9 +29,17 @@ def rename_share_route():
 def status():
     return sambaRoute.get_status()
 
-def authenticate(username, password):
-    p = pam.pam()
-    return p.authenticate(username, password)
+@app.route('/enable', methods=['GET'])
+def enable():
+    return sambaRoute.get_enableAtBoot()
+
+@app.route('/update_samba', methods=['POST'])
+def updateSamba():
+    data = request.get_json()
+    action = data.get('action')
+    onReboot = data.get('onReboot')
+    result = sambaRoute.update_samba(action)
+    return jsonify(result)
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -38,6 +49,46 @@ def login():
             return jsonify({'message': 'Login successful'}), 200
         else:
             return jsonify({'error': 'Login failed'}), 401
+
+def authenticate(username, password):
+    p = pam.pam()
+    return p.authenticate(username, password)
+
+@app.route('/shares/<share_name>', methods=['PUT'])
+def update_share(share_name):
+    updates = request.data.decode('utf-8')
+
+    try:
+        updates_json = sambaRoute.parse_json(updates)
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+    if sambaRoute.update_share_config(share_name, updates_json):
+        return jsonify({"status": "success", "updated": updates_json})
+    else:
+        return jsonify({"status": "error", "message": "Share not found"}), 404
+
+@app.route('/deleteShare', methods=['POST'])
+def delete_share():
+    data = request.json
+    share_name = data.get('share_name')
+
+    if not share_name:
+        return jsonify({"error": "Share name not provided."}), 400
+
+    success, message = sambaRoute.delete_samba_share(share_name)
+    
+    if success:
+        return jsonify({"message": message}), 200
+    else:
+        return jsonify({"error": message}), 500
+
+@app.route('/workgroup', methods=['GET', 'PUT'])
+def workgroup():
+    if request.method == 'GET':
+        return sambaRoute.get_workgroup()
+    elif request.method == 'PUT':
+        return sambaRoute.update_workgroup()
 
 if __name__ == "__main__":
     app.run(debug=True)
