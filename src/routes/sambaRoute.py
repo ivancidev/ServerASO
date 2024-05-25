@@ -228,3 +228,35 @@ def update_samba(action):
             'error': str(e)
         }
 
+def delete_samba_share(share_name):
+    try:
+        with open(SAMBA_CONFIG_FILE, 'r') as file:
+            lines = file.readlines()
+
+        start_idx = None
+        end_idx = None
+
+        for i, line in enumerate(lines):
+            if line.strip().startswith(f"[{share_name}]"):
+                start_idx = i
+                break
+
+        if start_idx is None:
+            return False, f"Share '{share_name}' not found."
+
+        for i in range(start_idx + 1, len(lines)):
+            if lines[i].strip().startswith('['):
+                end_idx = i
+                break
+        if end_idx is None:
+            end_idx = len(lines)
+
+        new_lines = lines[:start_idx] + lines[end_idx:]
+
+        with open(SAMBA_CONFIG_FILE, 'w') as file:
+            file.writelines(new_lines)
+
+        return True, f"Share '{share_name}' successfully deleted."
+    except Exception as e:
+        return False, str(e)
+
