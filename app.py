@@ -5,6 +5,9 @@ import pam
 
 app = Flask(__name__)
 CORS(app)
+SMB_CONF_PATH = '/etc/samba/smb.conf'
+
+
 @app.route('/', methods=['GET'])
 def index():
     return sambaRoute.greet()
@@ -82,3 +85,20 @@ def delete_share():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+
+@app.route('/addShare', methods=['POST'])
+def add_samba_share_endpoint():
+    try:
+        share_config = request.json
+        if 'name' not in share_config or 'path' not in share_config:
+            return jsonify({"error": "El campo 'name' y 'path' son obligatorios"}), 400
+
+        sambaRoute.add_samba_share(SMB_CONF_PATH, share_config)
+        return jsonify({"message": "Recurso Samba agregado con éxito"}), 201
+
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    except Exception as e:
+        return jsonify({"error": "Error interno del servidor"}), 500
