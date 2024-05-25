@@ -34,11 +34,13 @@ def enable():
 
 @app.route('/update_samba', methods=['POST'])
 def updateSamba():
-    data = request.get_json()
-    action = data.get('action')
-    onReboot = data.get('onReboot')
-    result = sambaRoute.update_samba(action)
-    return jsonify(result)
+    data = request.json
+    act = data.get('actual')
+    on = data.get('onReboot')
+    res = sambaRoute.update_samba(act, on)
+    print(res)
+    return jsonify(res)
+
 
 @app.route('/login', methods=['POST'])
 def login():
