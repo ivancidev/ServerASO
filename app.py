@@ -2,9 +2,11 @@ from flask import Flask, request, jsonify
 from src.routes import sambaRoute
 from flask_cors import CORS
 import pam
+import os
 
 app = Flask(__name__)
 CORS(app)
+SMB_CONF_PATH = '/etc/samba/smb.conf'
 
 
 @app.route('/', methods=['GET'])
@@ -93,3 +95,37 @@ def workgroup():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+
+@app.route('/addShare', methods=['POST'])
+def add_samba_share_endpoint():
+    try:
+        share_config = request.json
+        if 'name' not in share_config or 'path' not in share_config:
+            return jsonify({"error": "The 'name' and 'path' fields are required"}), 400
+
+        sambaRoute.add_samba_share(SMB_CONF_PATH, share_config)
+        return jsonify({"message": "Samba resource successfully added"}), 201
+
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    except Exception as e:
+        return jsonify({"error": "Internal Server Error"}), 500
+    
+   
+@app.route('/files', methods=['GET'])
+def get_files():
+    user = request.args.get('user')
+    if not user:
+        return jsonify({"error": "User parameter is required"}), 400
+
+    home_path = f'/home/{user}'
+    try:
+        home_files = [f for f in os.listdir(home_path) 
+                      if os.path.isdir(os.path.join(home_path, f)) and not f.startswith('.')]
+        home_files = [os.path.join(home_path, f) for f in home_files]
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+    return jsonify(home_files)

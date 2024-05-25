@@ -1,4 +1,4 @@
-from flask import jsonify,request
+from flask import jsonify, request
 import subprocess
 import re
 import json
@@ -324,5 +324,33 @@ def execute_command(command):
             'error': result.stderr.strip()
         }
 
-  
+    
+def format_key(key):
+    formatted_key = ''
+    for i, char in enumerate(key):
+        if i > 0 and char.isupper():
+            formatted_key += ' ' + char.lower()
+        else:
+            formatted_key += char
+    return formatted_key
+
+def add_samba_share(config_path, share_config):
+    config = configparser.ConfigParser(allow_no_value=True)
+    config.optionxform = str  
+    config.read(config_path)
+
+    if config.has_section(share_config['name']):
+        raise ValueError(f"Share {share_config['name']} already exists")
+
+    config.add_section(share_config['name'])
+
+    for key, value in share_config.items():
+        if key != 'name': 
+            formatted_key = format_key(key)
+            config.set(share_config['name'], formatted_key, value)
+
+    with open(config_path, 'w') as configfile:
+        config.write(configfile)
+
+
 
