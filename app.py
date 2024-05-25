@@ -38,10 +38,6 @@ def updateSamba():
     result = sambaRoute.update_samba(action)
     return jsonify(result)
 
-def authenticate(username, password):
-    p = pam.pam()
-    return p.authenticate(username, password)
-
 @app.route('/login', methods=['POST'])
 def login():
         username = request.json['username']
@@ -68,6 +64,21 @@ def update_share(share_name):
         return jsonify({"status": "success", "updated": updates_json})
     else:
         return jsonify({"status": "error", "message": "Share not found"}), 404
+
+@app.route('/deleteShare', methods=['POST'])
+def delete_share():
+    data = request.json
+    share_name = data.get('share_name')
+
+    if not share_name:
+        return jsonify({"error": "Share name not provided."}), 400
+
+    success, message = sambaRoute.delete_samba_share(share_name)
+    
+    if success:
+        return jsonify({"message": message}), 200
+    else:
+        return jsonify({"error": message}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
