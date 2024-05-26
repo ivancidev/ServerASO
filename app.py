@@ -3,6 +3,7 @@ from src.routes import sambaRoute
 from flask_cors import CORS
 import pam
 import os
+import re
 
 app = Flask(__name__)
 CORS(app)
@@ -129,3 +130,80 @@ def get_files():
         return jsonify({"error": str(e)}), 500
     
     return jsonify(home_files)
+
+
+@app.route('/deleteAttribute', methods=['POST'])
+def delete_smb_attribute():
+    resource_name = request.json.get('resourceName')
+    attribute_name = request.json.get('attributeName')
+
+    if not resource_name or not attribute_name:
+        return jsonify({'error': 'Nombre de recurso o atributo no especificado'}), 400
+
+    attribute_name_formatted = re.sub(r'(?<!^)(?=[A-Z])', ' ', attribute_name).lower()
+
+    resource_found = False
+
+    try:
+        with open('/etc/samba/smb.conf', 'r') as f:
+            lines = f.readlines()
+
+        with open('/etc/samba/smb.conf', 'w') as f:
+            in_target_section = False
+            for line in lines:
+                if line.strip().startswith('[' + resource_name):
+                    in_target_section = True
+                    resource_found = True
+                elif line.strip().startswith('['):
+                    in_target_section = False
+
+                if in_target_section and attribute_name_formatted in line.lower():
+                    continue 
+                else:
+                    f.write(line)
+
+        if not resource_found:
+            return jsonify({'error': f'El recurso {resource_name} no fue encontrado en smb.conf'}), 404
+        else:
+            return jsonify({'message': f'Atributo {attribute_name} eliminado del recurso {resource_name} correctamente'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/addAttribute', methods=['POST'])
+def add_smb_attribute():
+    resource_name = request.json.get('resourceName')
+    attribute_name = request.json.get('attributeName')
+    attribute_value = request.json.get('attributeValue')
+
+    if not resource_name or not attribute_name or not attribute_value:
+        return jsonify({'error': 'Nombre de recurso, atributo o valor no especificado'}), 400
+
+    attribute_name_formatted = format_attribute_name(attribute_name)
+
+    line_to_add = f"\t{attribute_name_formatted} = {attribute_value}\n"
+
+    resource_found = False
+
+    try:
+        with open('/etc/samba/smb.conf', 'r') as f:
+            lines = f.readlines()
+
+        with open('/etc/samba/smb.conf', 'w') as f:
+            for line in lines:
+                f.write(line)
+                if line.strip().startswith('[' + resource_name):
+                    resource_found = True
+                    f.write(line_to_add)
+
+        if not resource_found:
+            return jsonify({'error': f'El recurso {resource_name} no fue encontrado en smb.conf'}), 404
+        else:
+            return jsonify({'message': f'Atributo {attribute_name} agregado al recurso {resource_name} correctamente'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+def format_attribute_name(attribute_name):
+    formatted_name = re.sub(r'(?<!^)(?=[A-Z])', ' ', attribute_name).lower()
+    return formatted_name
+
+
