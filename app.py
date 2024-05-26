@@ -97,6 +97,47 @@ def workgroup():
 if __name__ == "__main__":
     app.run(debug=True)
 
+@app.route('/add_user', methods=['POST'])
+def addUser():
+    data = request.json
+    username = data.get('name')
+    password = data.get('pass')
+    if not username or not password:
+        return jsonify({'success': False, 'message': 'Username and password are required'}), 400
+
+    # Verificar si el usuario ya existe en el sistema Linux
+    if not sambaRoute.user_exists(username):
+        return jsonify({'success': False, 'message': f'User {username} does not exist in the system'}), 404
+
+    # Establecer la contraseña de Samba
+    samba_result = sambaRoute.set_samba_password(username, password)
+    if not samba_result['success']:
+        return jsonify(samba_result), 500
+    print("Si se pudo wachin")
+    return jsonify({'success': True, 'message': 'Samba user created successfully'})
+
+@app.route('/samba_users', methods=['GET'])
+def samba_users():
+    result = sambaRoute.get_samba_users()
+    if result['success']:
+        return jsonify(result)
+    else:
+        return jsonify(result), 500
+
+@app.route('/delete_samba_user', methods=['DELETE'])
+def delete_user():
+    data = request.get_json()
+    username = data.get('username')
+    if not username:
+        return jsonify({'success': False, 'message': 'Username is required'}), 400
+
+    # Eliminar el usuario de Samba
+    result = sambaRoute.delete_samba_user(username)
+    if not result['success']:
+        return jsonify(result), 500
+
+    return jsonify({'success': True, 'message': f'Samba user {username} deleted successfully'})
+
 
 @app.route('/addShare', methods=['POST'])
 def add_samba_share_endpoint():

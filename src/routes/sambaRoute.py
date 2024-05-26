@@ -202,11 +202,11 @@ def update_samba(action, onReboot):
     try:
         # Mapa de acciones a comandos systemctl
         commands = {
-            'stop': 'systemctl stop smbd.service',
-            'restart': 'systemctl restart smbd.service',
-            'reload': 'systemctl reload smbd.service',
-            'enabled': 'systemctl enable smbd.service',
-            'disabled': 'systemctl disable smbd.service'
+            'stop': 'sudo systemctl stop smbd.service',
+            'restart': 'sudo systemctl restart smbd.service',
+            'reload': 'sudo systemctl reload smbd.service',
+            'enabled': 'sudo systemctl enable smbd.service',
+            'disabled': 'sudo systemctl disable smbd.service'
         }
         if action in commands:
             action_result = execute_command(commands[action])
@@ -351,6 +351,51 @@ def add_samba_share(config_path, share_config):
 
     with open(config_path, 'w') as configfile:
         config.write(configfile)
+def add_system_user(username):
+    try:
+        result = subprocess.run(['sudo', 'adduser', '--disabled-password', '--gecos', '""', username],
+                                check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        return {'success': True, 'message': result.stdout}
+    except subprocess.CalledProcessError as e:
+        return {'success': False, 'message': e.stderr}
 
+def user_exists(username):
+    try:
+        subprocess.run(['id', username], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+# Función para establecer la contraseña de Samba
+def set_samba_password(username, password):
+    try:
+        process = subprocess.Popen(['sudo', 'smbpasswd', '-a', username],
+                                   stdin=subprocess.PIPE,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE,
+                                   universal_newlines=True)
+        output, error = process.communicate(f'{password}\n{password}\n')
+        if process.returncode == 0:
+            return {'success': True, 'message': output}
+        else:
+            return {'success': False, 'message': error}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+    
+def get_samba_users():
+    try:
+        result = subprocess.run(['sudo', 'pdbedit', '-L'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        users = [line.split(':')[0] for line in result.stdout.split('\n') if line]
+        return {'success': True, 'users': users}
+    except subprocess.CalledProcessError as e:
+        return {'success': False, 'message': e.stderr}
+
+def delete_samba_user(username):
+    try:
+        result = subprocess.run(['sudo', 'smbpasswd', '-x', username],
+                                check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        return {'success': True, 'message': result.stdout}
+    except subprocess.CalledProcessError as e:
+        return {'success': False, 'message': e.stderr}
 
 
