@@ -248,3 +248,14 @@ def format_attribute_name(attribute_name):
     return formatted_name
 
 
+@app.route('/updateGuest', methods=['POST'])
+def update_guest_access():
+    data = request.json
+    share_name = data['shareName']
+    guest_access = data['guestAccess']
+
+    try:
+        sambaRoute.update_guest_access(share_name, guest_access)
+        return jsonify({'message': 'Guest access updated successfully'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

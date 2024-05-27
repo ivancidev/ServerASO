@@ -94,7 +94,7 @@ def rename_share(old_name, new_name):
 def get_status():
     try:
         # Ejecuta el comando `systemctl is-active smb`
-        result = subprocess.run(['systemctl', 'is-active', 'smbd.service'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        result = subprocess.run(['systemctl', 'is-active', 'smb.service'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         
         # Captura la salida y limpia los espacios en blanco
         output = result.stdout.strip()
@@ -177,7 +177,7 @@ def parse_json(data):
 def get_enableAtBoot():
     try:
         # Ejecuta el comando `systemctl is-active smb`
-        result = subprocess.run(['systemctl', 'is-enabled', 'smbd.service'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        result = subprocess.run(['systemctl', 'is-enabled', 'smb.service'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         
         # Captura la salida y limpia los espacios en blanco
         output = result.stdout.strip()
@@ -202,11 +202,11 @@ def update_samba(action, onReboot):
     try:
         # Mapa de acciones a comandos systemctl
         commands = {
-            'stop': 'sudo systemctl stop smbd.service',
-            'restart': 'sudo systemctl restart smbd.service',
-            'reload': 'sudo systemctl reload smbd.service',
-            'enabled': 'sudo systemctl enable smbd.service',
-            'disabled': 'sudo systemctl disable smbd.service'
+            'stop': 'systemctl stop smb.service',
+            'restart': 'systemctl restart smb.service',
+            'reload': 'systemctl reload smb.service',
+            'enabled': 'systemctl enable smb.service',
+            'disabled': 'systemctl disable smb.service'
         }
         if action in commands:
             action_result = execute_command(commands[action])
@@ -398,4 +398,30 @@ def delete_samba_user(username):
     except subprocess.CalledProcessError as e:
         return {'success': False, 'message': e.stderr}
 
+def update_guest_access(share_name, guest_access):
+    with open(SAMBA_CONFIG_FILE, 'r') as file:
+        lines = file.readlines()
 
+    found_share = False
+    inside_share = False
+    updated_lines = []
+
+    for line in lines:
+        stripped_line = line.strip()
+        if stripped_line.startswith('[') and stripped_line.endswith(']'):
+            inside_share = stripped_line[1:-1] == share_name
+            if inside_share:
+                found_share = True
+            else:
+                inside_share = False
+
+        if inside_share and stripped_line.startswith('guest ok'):
+            line = f'guest ok = {guest_access}\n'
+
+        updated_lines.append(line)
+
+    if found_share:
+        with open(SAMBA_CONFIG_FILE, 'w') as file:
+            file.writelines(updated_lines)
+    else:
+        raise Exception(f"Share '{share_name}' not found in the configuration.")
