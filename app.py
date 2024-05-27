@@ -94,8 +94,6 @@ def workgroup():
     elif request.method == 'PUT':
         return sambaRoute.update_workgroup()
 
-if __name__ == "__main__":
-    app.run(debug=True)
 
 @app.route('/add_user', methods=['POST'])
 def addUser():
@@ -259,3 +257,8 @@ def update_guest_access():
         return jsonify({'message': 'Guest access updated successfully'}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+    
+
+if __name__ == "__main__":
+    app.run(debug=True)
